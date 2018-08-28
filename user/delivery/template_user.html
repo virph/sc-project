@@ -1,0 +1,39 @@
+<html>
+    <h1>User</h1>
+    
+    <form action="/" method="post">
+        <input name="user-name" placeholder="Search by name" autocomplete="off">
+        <button>Search</button>
+    </form>
+    {{if .SearchTerm}}
+    <span>Showing search of: "{{.SearchTerm}}"</span>
+    {{end}}
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>MSISDN</th>
+                <th>Email</th>
+                <th>birth_date</th>
+                <th>created_time</th>
+                <th>update_time</th>
+                <th>user_age</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Users}}
+            <tr>
+                <td>{{.ID}}</td>
+                <td>{{.Name}}</td>
+                <td>{{.MSISDN}}</td>
+                <td>{{.Email}}</td>
+                <td>{{if .BirthDate.Valid}}{{.BirthDate.Time}}{{else}}-{{end}}</td>
+                <td>{{if .CreateTime.Valid}}{{.CreateTime.Time}}{{else}}-{{end}}</td>
+                <td>{{if .UpdateTime.Valid}}{{.UpdateTime.Time}}{{else}}-{{end}}</td>
+                <td>{{.Age}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</html>
