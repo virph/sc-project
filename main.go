@@ -11,7 +11,6 @@ import (
 	"github.com/virph/sc-project/user/delivery"
 	userrepo "github.com/virph/sc-project/user/repository"
 	userusecase "github.com/virph/sc-project/user/usecase"
-	"github.com/virph/sc-project/visitorCount/repository"
 )
 
 const (
@@ -57,17 +56,6 @@ func main() {
 
 	redisPool := initRedis()
 	defer redisPool.Close()
-
-	redisVisitorCountRepository := repository.NewRedisVisitorCountRepository(redisPool)
-
-	redisVisitorCountRepository.Increase()
-	fmt.Println("redis", redisVisitorCountRepository.Get())
-	redisVisitorCountRepository.Increase()
-	fmt.Println("redis", redisVisitorCountRepository.Get())
-	redisVisitorCountRepository.Increase()
-	fmt.Println("redis", redisVisitorCountRepository.Get())
-	redisVisitorCountRepository.Increase()
-	fmt.Println("redis", redisVisitorCountRepository.Get())
 
 	pgUserRepo := userrepo.NewPostgreUserRepository(db)
 	userUsecase := userusecase.NewUserUsecase(&pgUserRepo)
