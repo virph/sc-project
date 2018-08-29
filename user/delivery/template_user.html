@@ -1,7 +1,7 @@
 <html>
     <h1>User</h1>
     
-    <form action="/" method="post">
+    <form action="/user" method="get">
         <input name="user-name" placeholder="Search by name" autocomplete="off">
         <button>Search</button>
     </form>
@@ -36,4 +36,5 @@
             {{end}}
         </tbody>
     </table>
+    <div style="padding-top: 10px">Visitor count: {{.VisitorCount}}</div>
 </html>

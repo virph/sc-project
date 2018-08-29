@@ -8,18 +8,23 @@ import (
 
 	"github.com/virph/sc-project/models"
 	"github.com/virph/sc-project/user"
+	"github.com/virph/sc-project/visitorCount"
 )
 
 type userHandler struct {
-	userUsecase user.UserUsecase
+	userUsecase         user.UserUsecase
+	visitorCountUsecase visitorCount.VisitorCountUsecase
 }
 
 type UserTemplateData struct {
-	SearchTerm string
-	Users      []models.User
+	SearchTerm   string
+	Users        []models.User
+	VisitorCount int
 }
 
 func (h *userHandler) handleFindUser(w http.ResponseWriter, r *http.Request) {
+	h.visitorCountUsecase.PublishIncrease()
+
 	if err := r.ParseForm(); err != nil {
 		fmt.Println(err)
 	}
@@ -32,15 +37,17 @@ func (h *userHandler) handleFindUser(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 	tmpl.Execute(w, UserTemplateData{
-		SearchTerm: searchTerm,
-		Users:      users,
+		SearchTerm:   searchTerm,
+		Users:        users,
+		VisitorCount: h.visitorCountUsecase.Get(),
 	})
 }
 
-func NewUserHandler(userUsecase *user.UserUsecase) {
+func NewUserHandler(u *user.UserUsecase, v *visitorCount.VisitorCountUsecase) {
 	handler := userHandler{
-		userUsecase: *userUsecase,
+		userUsecase:         *u,
+		visitorCountUsecase: *v,
 	}
 
-	http.HandleFunc("/", handler.handleFindUser)
+	http.HandleFunc("/user", handler.handleFindUser)
 }

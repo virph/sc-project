@@ -6,11 +6,16 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/virph/sc-project/visitorCount"
+
 	redigo "github.com/garyburd/redigo/redis"
 	_ "github.com/lib/pq"
+	nsq "github.com/nsqio/go-nsq"
 	"github.com/virph/sc-project/user/delivery"
 	userrepo "github.com/virph/sc-project/user/repository"
 	userusecase "github.com/virph/sc-project/user/usecase"
+	visitorcountrepo "github.com/virph/sc-project/visitorCount/repository"
+	visitorcountusecase "github.com/virph/sc-project/visitorCount/usecase"
 )
 
 const (
@@ -23,6 +28,8 @@ const (
 	redisHost = "devel-redis.tkpd:6379"
 
 	serverPort = ":3000"
+
+	nsqHost = "127.0.0.1:4150"
 )
 
 func initDb() *sql.DB {
@@ -63,6 +70,37 @@ func initRedis() *redigo.Pool {
 	return pool
 }
 
+func initNSQ() *nsq.Producer {
+	config := nsq.NewConfig()
+	producer, err := nsq.NewProducer(nsqHost, config)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if err := producer.Ping(); err != nil {
+		log.Fatalln(err)
+	}
+	log.Println("NSQ connected")
+	return producer
+}
+
+func initNSQConsumer(visitorCountUsecase visitorCount.VisitorCountUsecase) {
+	config := nsq.NewConfig()
+	c, err := nsq.NewConsumer("visitor_count", "visitor_count_channel", config)
+	if err != nil {
+		log.Fatalln(nil)
+	}
+
+	c.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
+		visitorCountUsecase.Increase()
+		return nil
+	}))
+
+	err = c.ConnectToNSQD(nsqHost)
+	if err != nil {
+		log.Fatalln(err)
+	}
+}
+
 func main() {
 	db := initDb()
 	defer db.Close()
@@ -70,9 +108,19 @@ func main() {
 	redisPool := initRedis()
 	defer redisPool.Close()
 
+	nsqProducer := initNSQ()
+
 	pgUserRepo := userrepo.NewPostgreUserRepository(db)
 	userUsecase := userusecase.NewUserUsecase(&pgUserRepo)
-	delivery.NewUserHandler(&userUsecase)
+
+	nsqVisitorCountRepo := visitorcountrepo.NewNsqVisitorCountRepository(nsqProducer)
+
+	rsVisitorCountRepo := visitorcountrepo.NewRedisVisitorCountRepository(redisPool)
+	visitorCountUsecase := visitorcountusecase.NewVisitorCountUsecase(&rsVisitorCountRepo, &nsqVisitorCountRepo)
+
+	delivery.NewUserHandler(&userUsecase, &visitorCountUsecase)
+
+	initNSQConsumer(visitorCountUsecase)
 
 	log.Println("Listening to port", serverPort)
 	http.ListenAndServe(serverPort, nil)
