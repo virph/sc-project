@@ -25,7 +25,7 @@ func (r *redisVisitorCountRepository) Increase() {
 	defer con.Close()
 
 	con.Do("INCR", key)
-	con.Do("EXPIRE", key, expire)
+	updateExpire(&con)
 }
 
 func (r *redisVisitorCountRepository) Get() int {
@@ -34,4 +34,8 @@ func (r *redisVisitorCountRepository) Get() int {
 
 	v, _ := redigo.Int(con.Do("GET", key))
 	return v
+}
+
+func updateExpire(con *redigo.Conn) {
+	redigo.Conn(*con).Do("EXPIRE", key, expire)
 }

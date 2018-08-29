@@ -14,11 +14,13 @@ import (
 )
 
 const (
-	host     = "devel-postgre.tkpd"
-	port     = 5432
-	user     = "tkpdtraining"
-	password = "1tZCjrIcYeR1uQblQz0gBlIFU"
-	dbname   = "tokopedia-dev-db"
+	dbHost = "devel-postgre.tkpd"
+	dbPort = 5432
+	dbUser = "tkpdtraining"
+	dbPass = "1tZCjrIcYeR1uQblQz0gBlIFU"
+	dbName = "tokopedia-dev-db"
+
+	redisHost = "devel-redis.tkpd:6379"
 
 	serverPort = ":3000"
 )
@@ -30,7 +32,7 @@ func initDb() *sql.DB {
 	)
 
 	cs := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		user, password, host, port, dbname)
+		dbUser, dbPass, dbHost, dbPort, dbName)
 	db, err = sql.Open("postgres", cs)
 	if err != nil {
 		log.Fatalln(err)
@@ -45,9 +47,20 @@ func initDb() *sql.DB {
 }
 
 func initRedis() *redigo.Pool {
-	return redigo.NewPool(func() (r redigo.Conn, err error) {
-		return redigo.Dial("tcp", "devel-redis.tkpd:6379")
+	pool := redigo.NewPool(func() (r redigo.Conn, err error) {
+		return redigo.Dial("tcp", redisHost)
 	}, 1)
+
+	con := pool.Get()
+	defer con.Close()
+
+	_, err := con.Do("PING")
+	if err != nil {
+		log.Fatalln("Can't connect to the Redis database")
+	}
+
+	log.Println("Redis connected")
+	return pool
 }
 
 func main() {
@@ -61,6 +74,6 @@ func main() {
 	userUsecase := userusecase.NewUserUsecase(&pgUserRepo)
 	delivery.NewUserHandler(&userUsecase)
 
-	log.Println("Listening on port", serverPort)
+	log.Println("Listening to port", serverPort)
 	http.ListenAndServe(serverPort, nil)
 }
